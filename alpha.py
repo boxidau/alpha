@@ -5,6 +5,7 @@ import json
 import shutil
 import base64
 import hashlib
+import time
 from botocore.exceptions import ClientError
 
 class Alpha(object):
@@ -30,8 +31,8 @@ class Alpha(object):
 
     def push_single(self, module_path):
         try:
-            lbd_config_file = open('%s/lambda.json' % module_path)
-            lbd_config = json.load(lbd_config_file)
+            with open('%s/lambda.json' % module_path) as lbd_config_file:
+                lbd_config = json.load(lbd_config_file)
             self.upload_lambda('%s' % module_path, lbd_config)
 
         except IOError:
@@ -79,17 +80,23 @@ class Alpha(object):
                 ]
             }
 
+            print('%s: creating role' % lbd_config['name'])
             fn_role = self.iam.create_role(
                 RoleName='alpha_role_lambda_%s' % lbd_config['name'],
                 AssumeRolePolicyDocument=json.dumps(lambda_assume_role_policy)
             )
 
+            print('%s: updating inline policy' % lbd_config['name'])
             fn_policy = self.iam.put_role_policy(
                 RoleName='alpha_role_lambda_%s' % lbd_config['name'],
                 PolicyName=policy_name,
                 PolicyDocument=json.dumps(lbd_config['policy'])
             )
 
+            # lambda doesn't seem to be able to assume the role without a delay here
+            time.sleep(4)
+
+            print('%s: uploading function' % lbd_config['name'])
             lbd_fn_create = self.lbd.create_function(
                 FunctionName=lbd_config['name'],
                 Runtime=lbd_config['runtime'],
