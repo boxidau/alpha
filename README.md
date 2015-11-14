@@ -15,6 +15,8 @@ pip install .
 
 After a bit more testing and possibly a name change I'll make a proper pip package
 
+Alpha uses standard boto3 authentication methods (envvar, ~/.aws/credentials) Make sure you have this [setup](http://boto3.readthedocs.org/en/latest/guide/configuration.html).
+
 
 ## Project Setup
 
