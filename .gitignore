@@ -1,0 +1,4 @@
+env
+alpha_lambda.egg-info
+*.pyc
+.idea
