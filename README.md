@@ -66,3 +66,7 @@ Will promote the given alias to the latest published version
 # promote an entire project
 alpha promote <alias_name> [/path/to/project]
 ```
+
+## Contributing
+This is a very early stages project. I literlly whipped it up in an afternoon.
+If you'd like to contribute please fork the repo and submit a PR!
