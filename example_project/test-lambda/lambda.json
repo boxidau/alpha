@@ -5,11 +5,6 @@
   "handler": "index.lambda_handler",
   "memory": 128,
   "timeout": 5,
-  "region": "us-east-1",
-  "alias": {
-    "staging": "$LATEST",
-    "production": "prod"
-  },
   "policy": {
     "Version": "2012-10-17",
     "Statement": [

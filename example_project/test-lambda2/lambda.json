@@ -1,0 +1,34 @@
+{
+  "name": "test-lambda2",
+  "description": "Test 123",
+  "runtime": "nodejs",
+  "handler": "index.lambda_handler",
+  "memory": 128,
+  "timeout": 5,
+  "policy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Action": [
+          "dynamodb:DeleteItem",
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:UpdateItem"
+        ],
+        "Effect": "Allow",
+        "Resource": "*"
+      },
+      {
+        "Resource": "*",
+        "Action": [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        "Effect": "Allow"
+      }
+    ]
+  }
+}
