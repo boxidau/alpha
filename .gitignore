@@ -1,4 +1,4 @@
 env
-alpha_lambda.egg-info
+alpha.egg-info
 *.pyc
 .idea
