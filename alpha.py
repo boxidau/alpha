@@ -11,8 +11,8 @@ from botocore.exceptions import ClientError
 class Alpha(object):
 
     def __init__(self):
-        self.lbd = boto3.client('lambda', 'us-east-1')
-        self.iam = boto3.client('iam', 'us-east-1')
+        self.lbd = boto3.client('lambda')
+        self.iam = boto3.client('iam')
         self.lbd_fn_list = self.lbd.list_functions()
 
     def enumerate_modules(self, project_path):
