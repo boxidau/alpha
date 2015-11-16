@@ -8,62 +8,55 @@ import hashlib
 import time
 from botocore.exceptions import ClientError
 
+
 class Alpha(object):
 
     def __init__(self):
-        self.lbd = boto3.client('lambda', 'us-east-1')
-        self.iam = boto3.client('iam', 'us-east-1')
+        self.lbd = boto3.client('lambda')
+        self.iam = boto3.client('iam')
         self.lbd_fn_list = self.lbd.list_functions()
 
-    def enumerate_modules(self, project_path):
-        project_modules = {}
+    @staticmethod
+    def enumerate_modules(project_path):
         for dirname in os.listdir(project_path):
             try:
-                with open('%s/%s/lambda.json' % (project_path, dirname)) as lbd_config_file:
-                    lbd_config = json.load(lbd_config_file)
-                project_modules['%s/%s' % (project_path, dirname)] = lbd_config
+                with open(os.path.join(project_path, dirname, 'lambda.json')) as lbd_config_file:
+                    yield os.path.join(project_path, dirname), json.load(lbd_config_file)
             except IOError:
-                #print ('Skipping %s, failed to open lambda.json' % dirname)
+                #print ('Skipping {0}, failed to open lambda.json'.format(dirname)
                 pass
             except ValueError:
-                print ('Could not read json from %s' % lbd_config_file)
-        return project_modules
+                print ('Could not read json from {0}'.format(lbd_config_file))
 
     def push_single(self, module_path):
         try:
-            with open('%s/lambda.json' % module_path) as lbd_config_file:
+            with open(os.path.join(module_path, 'lambda.json')) as lbd_config_file:
                 lbd_config = json.load(lbd_config_file)
-            self.upload_lambda('%s' % module_path, lbd_config)
-
+            self.upload_lambda('{0}'.format(module_path, lbd_config))
         except IOError:
-            print ('Skipping %s, failed to open lambda.json' % module_path)
+            print ('Skipping {0}, failed to open lambda.json'.format(module_path))
             pass
         except ValueError:
-            print ('Could not read json from %s/lambda.json' % module_path)
+            print ('Could not read json from {0}/lambda.json'.format(module_path))
 
     def push_all(self, project_path):
-        modules = self.enumerate_modules(project_path)
-        for module_path, module_config in modules.iteritems():
+        for module_path, module_config in self.enumerate_modules(project_path):
             self.upload_lambda(module_path, module_config)
 
     def promote_all(self, project_path, alias):
-        modules = self.enumerate_modules(project_path)
-        for module_path, module_config in modules.iteritems():
+        for module_path, module_config in self.enumerate_modules(project_path):
             self.promote_lambda(module_path, module_config, alias)
 
     def upload_lambda(self, dirname, lbd_config):
-        tmp_dir = '/tmp/python-%s' % os.getpid()
+        tmp_dir = '/tmp/python-{0}'.format(os.getpid())
         archive = shutil.make_archive(
-            '%s/%s' % (tmp_dir, lbd_config['name']),
+            os.path.join(tmp_dir, lbd_config['name']),
             'zip',
-            '%s/src' % dirname,
+            os.path.join(dirname, 'src'),
             '.'
         )
-
         archive_file = open(archive, "rb")
-        policy_name='alpha_policy_lambda_%s' % lbd_config['name']
-
-
+        policy_name='alpha_policy_lambda_{0}'.format(lbd_config['name'])
         existing_fn = next((fn for fn in self.lbd_fn_list['Functions'] if fn['FunctionName'] == lbd_config['name']), None)
         if not existing_fn:
             # New function
@@ -80,15 +73,15 @@ class Alpha(object):
                 ]
             }
 
-            print('%s: creating role' % lbd_config['name'])
+            print('{0}: creating role'.format(lbd_config['name']))
             fn_role = self.iam.create_role(
-                RoleName='alpha_role_lambda_%s' % lbd_config['name'],
+                RoleName='alpha_role_lambda_{0}'.format(lbd_config['name']),
                 AssumeRolePolicyDocument=json.dumps(lambda_assume_role_policy)
             )
 
-            print('%s: updating inline policy' % lbd_config['name'])
+            print('{0}: updating inline policy'.format(lbd_config['name']))
             fn_policy = self.iam.put_role_policy(
-                RoleName='alpha_role_lambda_%s' % lbd_config['name'],
+                RoleName='alpha_role_lambda_{0}'.format(lbd_config['name']),
                 PolicyName=policy_name,
                 PolicyDocument=json.dumps(lbd_config['policy'])
             )
@@ -96,7 +89,7 @@ class Alpha(object):
             # lambda doesn't seem to be able to assume the role without a delay here
             time.sleep(4)
 
-            print('%s: uploading function' % lbd_config['name'])
+            print('{0}: uploading function'.format(lbd_config['name']))
             lbd_fn_create = self.lbd.create_function(
                 FunctionName=lbd_config['name'],
                 Runtime=lbd_config['runtime'],
@@ -115,7 +108,7 @@ class Alpha(object):
             archive_file_content = archive_file.read()
             archive_hash = base64.b64encode(hashlib.sha256(archive_file_content).digest())
             if not archive_hash == existing_fn['CodeSha256']:
-                print('New function code detected for %s' % lbd_config['name'])
+                print('New function code detected for {0}'.format(lbd_config['name']))
 
                 self.lbd.update_function_code(
                     FunctionName=lbd_config['name'],
@@ -125,7 +118,7 @@ class Alpha(object):
                 # update function code
             else:
                 # code already current
-                print('Lambda code up-to-date for %s' % lbd_config['name'])
+                print('Lambda code up-to-date for {0}'.format(lbd_config['name']))
 
             # Check function config
             if existing_fn['Runtime'] != lbd_config['runtime']:
@@ -138,9 +131,9 @@ class Alpha(object):
                         existing_fn['Timeout'] == lbd_config['timeout']
             ]):
                 # no updates required for config
-                print('Lambda config up-to-date for %s' % lbd_config['name'])
+                print('Lambda config up-to-date for {0}'.format(lbd_config['name']))
             else:
-                print('Updating function config for %s' % lbd_config['name'])
+                print('Updating function config for {0}'.format(lbd_config['name']))
                 self.lbd.update_function_configuration(
                     FunctionName=lbd_config['name'],
                     Handler=lbd_config['handler'],
@@ -153,20 +146,20 @@ class Alpha(object):
             fn_role_policy = self.iam.get_role_policy(RoleName=role_name, PolicyName=policy_name)
 
             if not fn_role_policy['PolicyDocument'] == lbd_config['policy']:
-                print('Updating policy for %s' % lbd_config['name'])
+                print('Updating policy for {0}'.format(lbd_config['name']))
                 fn_policy = self.iam.put_role_policy(
                     RoleName=role_name,
                     PolicyName=policy_name,
                     PolicyDocument=json.dumps(lbd_config['policy'])
                 )
             else:
-                print('Policy up-to-date for %s' % lbd_config['name'])
+                print('Policy up-to-date for {0}'.format(lbd_config['name']))
 
     def promote_lambda(self, module_path, module_config, alias):
         # promotes an aliased version to a resolved version of $LATEST
         existing_fn = next((fn for fn in self.lbd_fn_list['Functions'] if fn['FunctionName'] == module_config['name']), None)
         if not existing_fn:
-            raise ValueError('Lambda function %s does not exist on AWS and thus cannot be promoted' % module_config['name'])
+            raise ValueError('Lambda function {0} does not exist on AWS and thus cannot be promoted'.format(module_config['name']))
 
         try:
             existing_alias = self.lbd.get_alias(
@@ -181,16 +174,16 @@ class Alpha(object):
 
         if existing_alias:
             if latest_version == existing_alias['FunctionVersion']:
-                print('Alias %s for %s is up-to-date' % (alias, module_config['name']))
+                print('Alias {0} for {1} is up-to-date'.format(alias, module_config['name']))
             else:
-                print('Updating alias %s for %s to version %s' % (alias, module_config['name'], latest_version))
+                print('Updating alias {0} for {1} to version {2}'.format(alias, module_config['name'], latest_version))
                 self.lbd.update_alias(
                     FunctionName=module_config['name'],
                     Name=alias,
                     FunctionVersion=latest_version
                 )
         else:
-            print('Creating alias %s for %s at version %s' % (alias, module_config['name'], latest_version))
+            print('Creating alias {0} for {1} at version {2}'.format(alias, module_config['name'], latest_version))
             self.lbd.create_alias(
                 FunctionName=module_config['name'],
                 Name=alias,
