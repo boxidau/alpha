@@ -8,6 +8,7 @@ import hashlib
 import time
 from botocore.exceptions import ClientError
 
+
 class Alpha(object):
 
     def __init__(self):
@@ -15,26 +16,23 @@ class Alpha(object):
         self.iam = boto3.client('iam')
         self.lbd_fn_list = self.lbd.list_functions()
 
-    def enumerate_modules(self, project_path):
-        project_modules = {}
+    @staticmethod
+    def enumerate_modules(project_path):
         for dirname in os.listdir(project_path):
             try:
                 with open(os.path.join(project_path, dirname, 'lambda.json')) as lbd_config_file:
-                    lbd_config = json.load(lbd_config_file)
-                project_modules['{0}/{1}'.format(project_path, dirname)] = lbd_config
+                    yield os.path.join(project_path, dirname), json.load(lbd_config_file)
             except IOError:
                 #print ('Skipping {0}, failed to open lambda.json'.format(dirname)
                 pass
             except ValueError:
                 print ('Could not read json from {0}'.format(lbd_config_file))
-        return project_modules
 
     def push_single(self, module_path):
         try:
             with open(os.path.join(module_path, 'lambda.json')) as lbd_config_file:
                 lbd_config = json.load(lbd_config_file)
             self.upload_lambda('{0}'.format(module_path, lbd_config))
-
         except IOError:
             print ('Skipping {0}, failed to open lambda.json'.format(module_path))
             pass
@@ -42,13 +40,11 @@ class Alpha(object):
             print ('Could not read json from {0}/lambda.json'.format(module_path))
 
     def push_all(self, project_path):
-        modules = self.enumerate_modules(project_path)
-        for module_path, module_config in modules.iteritems():
+        for module_path, module_config in self.enumerate_modules(project_path):
             self.upload_lambda(module_path, module_config)
 
     def promote_all(self, project_path, alias):
-        modules = self.enumerate_modules(project_path)
-        for module_path, module_config in modules.iteritems():
+        for module_path, module_config in self.enumerate_modules(project_path):
             self.promote_lambda(module_path, module_config, alias)
 
     def upload_lambda(self, dirname, lbd_config):
