@@ -19,7 +19,7 @@ class Alpha(object):
         project_modules = {}
         for dirname in os.listdir(project_path):
             try:
-                with open('{0}/{1}/lambda.json'.format(project_path, dirname)) as lbd_config_file:
+                with open(os.path.join(project_path, dirname, 'lambda.json')) as lbd_config_file:
                     lbd_config = json.load(lbd_config_file)
                 project_modules['{0}/{1}'.format(project_path, dirname)] = lbd_config
             except IOError:
@@ -31,7 +31,7 @@ class Alpha(object):
 
     def push_single(self, module_path):
         try:
-            with open('{0}/lambda.json'.format(module_path)) as lbd_config_file:
+            with open(os.path.join(module_path, 'lambda.json')) as lbd_config_file:
                 lbd_config = json.load(lbd_config_file)
             self.upload_lambda('{0}'.format(module_path, lbd_config))
 
@@ -54,16 +54,13 @@ class Alpha(object):
     def upload_lambda(self, dirname, lbd_config):
         tmp_dir = '/tmp/python-{0}'.format(os.getpid())
         archive = shutil.make_archive(
-            '{0}/{0}'.format(tmp_dir, lbd_config['name']),
+            os.path.join(tmp_dir, lbd_config['name']),
             'zip',
-            '{0}/src'.format(dirname),
+            os.path.join(dirname, 'src'),
             '.'
         )
-
         archive_file = open(archive, "rb")
         policy_name='alpha_policy_lambda_{0}'.format(lbd_config['name'])
-
-
         existing_fn = next((fn for fn in self.lbd_fn_list['Functions'] if fn['FunctionName'] == lbd_config['name']), None)
         if not existing_fn:
             # New function
