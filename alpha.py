@@ -14,7 +14,13 @@ class Alpha(object):
     def __init__(self):
         self.lbd = boto3.client('lambda')
         self.iam = boto3.client('iam')
-        self.lbd_fn_list = self.lbd.list_functions()
+        self._fn_list = None
+
+    @property
+    def lbd_fn_list(self):
+        if self._fn_list is None:
+            self._fn_list = self.lbd.list_functions()
+        return self._fn_list
 
     @staticmethod
     def enumerate_modules(project_path):
@@ -80,7 +86,7 @@ class Alpha(object):
             )
 
             print('{0}: updating inline policy'.format(lbd_config['name']))
-            fn_policy = self.iam.put_role_policy(
+            self.iam.put_role_policy(
                 RoleName='alpha_role_lambda_{0}'.format(lbd_config['name']),
                 PolicyName=policy_name,
                 PolicyDocument=json.dumps(lbd_config['policy'])
