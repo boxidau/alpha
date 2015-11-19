@@ -30,6 +30,27 @@ test_config = {
   }
 }
 
+broken_config = {
+  "name": "test-lambda",
+  "description": "Test 123",
+  "runtime": "python2.7",
+  "timeout": 5,
+  "policy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Resource": "*",
+        "Action": [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        "Effect": "Allow"
+      }
+    ]
+  }
+}
+
 
 @pytest.yield_fixture()
 def create_file_structure_src():
@@ -38,6 +59,20 @@ def create_file_structure_src():
     os.makedirs(os.path.join(tempdir, 'test-lambda', 'src'))
     with open(os.path.join(tempdir, 'test-lambda', 'lambda.json'), 'w') as f:
         f.writelines(json.dumps(test_config))
+
+    open(os.path.join(tempdir, 'test-lambda', 'src', 'test.py'), 'w').close()
+
+    yield tempdir
+
+    shutil.rmtree(tempdir)
+
+@pytest.yield_fixture()
+def create_broken_file_structure_src():
+    tempdir = tempfile.mkdtemp(prefix='alpha_test')
+    os.makedirs(os.path.join(tempdir, 'test-lambda'))
+    os.makedirs(os.path.join(tempdir, 'test-lambda', 'src'))
+    with open(os.path.join(tempdir, 'test-lambda', 'lambda.json'), 'w') as f:
+        f.writelines(json.dumps(broken_config))
 
     open(os.path.join(tempdir, 'test-lambda', 'src', 'test.py'), 'w').close()
 

@@ -34,11 +34,21 @@ class Alpha(object):
             except ValueError:
                 print ('Could not read json from {0}'.format(lbd_config_file))
 
+    @staticmethod
+    def check_config(lbd_config):
+        required_fields = {'policy', 'runtime', 'timeout', 'memory', 'name'}
+        if required_fields.issubset(lbd_config.keys()):
+            return True
+        print('Skipping {0}, you do not have all required field in your '
+              'configuration.'.format(lbd_config['name']))
+        return False
+
     def push_single(self, module_path):
         try:
             with open(os.path.join(module_path, 'lambda.json')) as lbd_config_file:
                 lbd_config = json.load(lbd_config_file)
-            self.upload_lambda('{0}'.format(module_path, lbd_config))
+            if self.check_config(lbd_config):
+                self.upload_lambda('{0}'.format(module_path, lbd_config))
         except IOError:
             print ('Skipping {0}, failed to open lambda.json'.format(module_path))
             pass
@@ -47,7 +57,8 @@ class Alpha(object):
 
     def push_all(self, project_path):
         for module_path, module_config in self.enumerate_modules(project_path):
-            self.upload_lambda(module_path, module_config)
+            if self.check_config(module_config):
+                self.upload_lambda(module_path, module_config)
 
     def promote_all(self, project_path, alias):
         for module_path, module_config in self.enumerate_modules(project_path):
@@ -80,10 +91,14 @@ class Alpha(object):
             }
 
             print('{0}: creating role'.format(lbd_config['name']))
-            fn_role = self.iam.create_role(
-                RoleName='alpha_role_lambda_{0}'.format(lbd_config['name']),
-                AssumeRolePolicyDocument=json.dumps(lambda_assume_role_policy)
-            )
+            try:
+                fn_role = self.iam.create_role(
+                    RoleName='alpha_role_lambda_{0}'.format(lbd_config['name']),
+                    AssumeRolePolicyDocument=json.dumps(lambda_assume_role_policy)
+                )
+            except ClientError:
+                print('{0}: warning policy might already exist'.format(lbd_config['name']))
+                fn_role = self.iam.get_role(RoleName='alpha_role_lambda_{0}'.format(lbd_config['name']))
 
             print('{0}: updating inline policy'.format(lbd_config['name']))
             self.iam.put_role_policy(
