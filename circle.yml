@@ -1,0 +1,7 @@
+dependencies:
+  post:
+    - pip install -r requirements-tests.txt
+
+test:
+  override:
+    - py.test tests/test_alpha.py
