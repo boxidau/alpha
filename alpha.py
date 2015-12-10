@@ -48,7 +48,7 @@ class Alpha(object):
             with open(os.path.join(module_path, 'lambda.json')) as lbd_config_file:
                 lbd_config = json.load(lbd_config_file)
             if self.check_config(lbd_config):
-                self.upload_lambda('{0}'.format(module_path, lbd_config))
+                self.upload_lambda(module_path, lbd_config)
         except IOError:
             print ('Skipping {0}, failed to open lambda.json'.format(module_path))
             pass
