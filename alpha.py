@@ -51,7 +51,6 @@ class Alpha(object):
                 lbd_config = json.load(lbd_config_file)
             if self.check_config(lbd_config):
                 if 'region' in lbd_config.keys():
-                    self.iam = boto3.client('iam', region_name=lbd_config['region'])
                     self.lbd = boto3.client('lambda', region_name=lbd_config['region'])
                 self.upload_lambda(module_path, lbd_config)
         except IOError:
@@ -64,7 +63,6 @@ class Alpha(object):
         for module_path, module_config in self.enumerate_modules(project_path):
             if self.check_config(module_config):
                 if 'region' in module_config.keys():
-                    self.iam = boto3.client('iam', region_name=module_config['region'])
                     self.lbd = boto3.client('lambda', region_name=module_config['region'])
                 self.upload_lambda(module_path, module_config)
 

@@ -4,8 +4,8 @@
 #
 #    pip-compile requirements.in
 #
-boto3==1.2.1
-botocore==1.3.7           # via boto3
+boto3>=1.2.1
+botocore>=1.3.7           # via boto3
 click==5.1
 docutils==0.12            # via botocore
 futures==2.2.0            # via boto3
