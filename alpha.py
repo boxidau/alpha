@@ -50,6 +50,8 @@ class Alpha(object):
             with open(os.path.join(module_path, 'lambda.json')) as lbd_config_file:
                 lbd_config = json.load(lbd_config_file)
             if self.check_config(lbd_config):
+                if 'region' in lbd_config.keys():
+                    self.lbd = boto3.client('lambda', region_name=lbd_config['region'])
                 self.upload_lambda(module_path, lbd_config)
         except IOError:
             print ('Skipping {0}, failed to open lambda.json'.format(module_path))
@@ -60,6 +62,8 @@ class Alpha(object):
     def push_all(self, project_path):
         for module_path, module_config in self.enumerate_modules(project_path):
             if self.check_config(module_config):
+                if 'region' in module_config.keys():
+                    self.lbd = boto3.client('lambda', region_name=module_config['region'])
                 self.upload_lambda(module_path, module_config)
 
     def promote_all(self, project_path, alias):
