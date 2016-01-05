@@ -75,16 +75,22 @@ class Alpha(object):
     def upload_lambda(self, dirname, lbd_config):
         with TemporaryDirectory() as tmp_dir:
             if lbd_config.get('virtualenv'):
+
+                virtual_env = lbd_config['virtualenv']
+
+                if not os.path.isdir(virtual_env):
+                    virtual_env = os.path.expanduser(os.path.join('~/.virtualenvs', virtual_env))
+
                 if os.name is 'nt':
                     archive = append_zip(
                     os.path.join(tmp_dir, lbd_config['name'])+'.zip',
-                    os.path.join(lbd_config['virtualenv'], 'Lib\site-packages'),
+                    os.path.join(virtual_env, 'Lib\site-packages'),
                     )
 
                 else:
                     archive = append_zip(
                         os.path.join(tmp_dir, lbd_config['name'])+'.zip',
-                        os.path.join(lbd_config['virtualenv'], 'lib/python2.7/site-packages'),
+                        os.path.join(virtual_env, 'lib/python2.7/site-packages'),
                     )
 
                 archive = append_zip(archive, os.path.join(dirname, 'src'))
