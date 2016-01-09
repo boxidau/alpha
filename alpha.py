@@ -9,6 +9,8 @@ import time
 import tempfile
 from botocore.exceptions import ClientError
 from contextlib import contextmanager
+import zipfile
+
 
 
 class Alpha(object):
@@ -72,12 +74,33 @@ class Alpha(object):
 
     def upload_lambda(self, dirname, lbd_config):
         with TemporaryDirectory() as tmp_dir:
-            archive = shutil.make_archive(
-                os.path.join(tmp_dir, lbd_config['name']),
-                'zip',
-                os.path.join(dirname, 'src'),
-                '.'
-            )
+            if lbd_config.get('virtualenv'):
+
+                virtual_env = lbd_config['virtualenv']
+
+                if not os.path.isdir(virtual_env):
+                    virtual_env = os.path.expanduser(os.path.join('~/.virtualenvs', virtual_env))
+
+                if os.name is 'nt':
+                    archive = append_zip(
+                    os.path.join(tmp_dir, lbd_config['name'])+'.zip',
+                    os.path.join(virtual_env, 'Lib\site-packages'),
+                    )
+
+                else:
+                    archive = append_zip(
+                        os.path.join(tmp_dir, lbd_config['name'])+'.zip',
+                        os.path.join(virtual_env, 'lib/python2.7/site-packages'),
+                    )
+
+                archive = append_zip(archive, os.path.join(dirname, 'src'))
+
+            else:
+                archive = append_zip(
+                    os.path.join(tmp_dir, lbd_config['name'])+'.zip',
+                    os.path.join(dirname, 'src'),
+                )
+
             archive_file = open(archive, "rb")
             policy_name='alpha_policy_lambda_{0}'.format(lbd_config['name'])
             existing_fn = next((fn for fn in self.lbd_fn_list['Functions'] if fn['FunctionName'] == lbd_config['name']), None)
@@ -217,6 +240,24 @@ class Alpha(object):
                 FunctionVersion=latest_version
             )
 
+def append_zip(base_name, root_dir=None, base_dir=None):
+    os.chdir(root_dir)
+
+    if base_dir is None:
+        base_dir = os.curdir
+
+    with zipfile.ZipFile(base_name, 'a', compression=zipfile.ZIP_DEFLATED) as zf:
+        path = os.path.normpath(base_dir)
+        zf.write(path, path)
+        for dirpath, dirnames, filenames in os.walk(base_dir, followlinks=True):
+            for name in sorted(dirnames):
+                path = os.path.normpath(os.path.join(dirpath, name))
+                zf.write(path, path)
+            for name in filenames:
+                path = os.path.normpath(os.path.join(dirpath, name))
+                if os.path.isfile(path):
+                    zf.write(path, path)
+    return base_name
 
 @contextmanager
 def TemporaryDirectory():
